@@ -57,7 +57,9 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"q6_cdsp_dtb_region", 0x9E900000, 0x80000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"q6_adsp_dtb_region", 0x9E980000, 0x80000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"adspslpi_region", 0x9EA00000, 0x6080000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
-  {"dump_display_region", 0xA4A80000, 0x800, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
+  // The DT declares 0x800 at 0xA4A80000; UEFI descriptors are page granular, so the row is rounded
+  // up to one page. UNVERIFIED(fuxi): no stock uefiplat.cfg to confirm the vendor window.
+  {"dump_display_region", 0xA4A80000, 0x1000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map, rounded to a page
   {"mpss_dsm_region", 0xD4D00000, 0x3300000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"tz_reserved_region", 0xD8000000, 0x100000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"xbl_sc_region", 0xD8100000, 0x40000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
@@ -68,9 +70,11 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"oem_vm_swiotlb", 0xF7B00000, 0x100000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"oem_vm_region", 0xF7C00000, 0x4800000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT reserved
   {"llcc_lpi_region", 0xFF800000, 0x600000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
-  {"ramoops", 0xA7000000, 0x400000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT reserved
+  // The live tree also carries ramoops@0xa7000000 (0xA7000000 + 0x400000), i.e. exactly the UEFI FD
+  // window, because the recovery kernel reuses that space after UEFI has exited. It is deliberately
+  // NOT reserved here: the FD Reserved / UEFI FD rows own that window while UEFI runs. That is the one
+  // device-tree reservation this table does not reproduce, and check-fuxi.py knows the exception.
   {"xbl_ramdump_region", 0x81200000, 0x280000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
-  {"splash_region", 0xB8000000, 0x2B00000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT reserved
   {"FD Reserved", 0xA7000000, 0x100000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},   // UEFI layout
   {"UEFI FD", 0xA7100000, 0x300000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},   // UEFI layout
   {"UEFI FD Reserved", 0xA7400000, 0x200000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},   // UEFI layout
@@ -84,14 +88,16 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"FV Region", 0xA7AD9000, 0x400000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"UEFI RESV", 0xA7ED9000, 0x127000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"Kernel", 0xA8000000, 0x10000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},   // UEFI layout
-  {"Display Reserved", 0xB8000000, 0x2B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},   // DT splash
+  // The DT calls this /reserved-memory/splash_region (label cont_splash_region); the row keeps the name
+  // FuxiGopLogDxe looks for. Same range as the device tree, 0xB8000000 + 0x2B00000.
+  {"Display Reserved", 0xB8000000, 0x2B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},   // DT splash_region
   {"DRAM 0x811d0000", 0x811D0000, 0x30000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x81480000", 0x81480000, 0x580000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x81cf4000", 0x81CF4000, 0xC000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x81f20000", 0x81F20000, 0x6E0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x82800000", 0x82800000, 0x8000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x9b09c000", 0x9B09C000, 0x64000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
-  {"DRAM 0xa4a80800", 0xA4A80800, 0x257F800, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
+  {"DRAM 0xa4a81000", 0xA4A81000, 0x257F000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xbab00000", 0xBAB00000, 0x1A200000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xe7cb0000", 0xE7CB0000, 0xFE4C000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xfc400000", 0xFC400000, 0x3400000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
