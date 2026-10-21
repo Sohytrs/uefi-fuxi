@@ -19,8 +19,9 @@
 
 #include "Sec.h"
 
-// First argument (x0) of the previous stage, saved by ModuleEntryPoint.S
-extern UINT64  gSecEntryArg0;
+// Arguments of the previous stage, saved by ModuleEntryPoint.S
+extern UINT64  gSecEntryArg0;   // x0: the device tree address
+extern UINT64  gSecEntryArg1;   // x1: the payload volume the shim appended, 0 when there is none
 
 // The library constructors ProcessLibraryConstructorList () runs for this module, in its generated order, called one by one so the screen
 // shows which one a stall is in (an entry here that the generated list lacks fails to link, which is the check).
@@ -170,10 +171,17 @@ SecMain (VOID)
     return;
   }
 
-  // Pass on what the previous stage handed over in x0 (a DT address for a
-  // Linux-style boot loader), so a DXE driver can use it.
+  // Pass on what the previous stage handed over: x0 is a DT address for a
+  // Linux-style boot loader, x1 is the payload volume the boot shim appended to
+  // the image (0 when the image carries none). A DXE driver uses both.
   {
-    UINT64  EntryArg = gSecEntryArg0;
+    struct {
+      UINT64  Dtb;
+      UINT64  Payload;
+    }       EntryArg;
+
+    EntryArg.Dtb     = gSecEntryArg0;
+    EntryArg.Payload = gSecEntryArg1;
 
     //
     // Reserve the device tree the previous stage handed over in x0.
@@ -185,13 +193,13 @@ SecMain (VOID)
     // translation fault. BuildMemoryAllocationHob wants a page-aligned base
     // and length, and the ABL's tree is not page aligned, so round outwards.
     //
-    if ((EntryArg != 0) && ((EntryArg & 3) == 0)) {
-      UINT32  DtMagic = SwapBytes32 (*(UINT32 *)(UINTN)EntryArg);
-      UINT32  DtSize  = SwapBytes32 (*(UINT32 *)(UINTN)(EntryArg + 4));
+    if ((EntryArg.Dtb != 0) && ((EntryArg.Dtb & 3) == 0)) {
+      UINT32  DtMagic = SwapBytes32 (*(UINT32 *)(UINTN)EntryArg.Dtb);
+      UINT32  DtSize  = SwapBytes32 (*(UINT32 *)(UINTN)(EntryArg.Dtb + 4));
 
       if ((DtMagic == 0xD00DFEED) && (DtSize > 0x1000) && (DtSize < 0x400000)) {
-        UINT64  DtBase = EntryArg & ~(UINT64)(EFI_PAGE_SIZE - 1);
-        UINT64  DtEnd  = (EntryArg + DtSize + EFI_PAGE_SIZE - 1) & ~(UINT64)(EFI_PAGE_SIZE - 1);
+        UINT64  DtBase = EntryArg.Dtb & ~(UINT64)(EFI_PAGE_SIZE - 1);
+        UINT64  DtEnd  = (EntryArg.Dtb + DtSize + EFI_PAGE_SIZE - 1) & ~(UINT64)(EFI_PAGE_SIZE - 1);
 
         BuildMemoryAllocationHob (DtBase, DtEnd - DtBase, EfiReservedMemoryType);
         DEBUG ((EFI_D_WARN, "SEC: reserved DT 0x%lx..0x%lx\n", DtBase, DtEnd));

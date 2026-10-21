@@ -54,6 +54,15 @@ _CleanLoop:
   ic    iallu
   dsb   sy
   isb
+
+  /* The payload volume, when the image carries one, starts right after the
+     firmware volume: hand its address over in x1 so the firmware can publish
+     it as a block device (the platform's own ramdisk channel is not available
+     on every bootloader). x1 is free here; the copy loop is done. */
+  adr   x1, _Payload
+  ldr   x2, =FD_SIZE
+  add   x1, x1, x2
+
   br    x5
 
 _Dead:
@@ -63,4 +72,7 @@ _Dead:
 .ltorg
 .align 4
 
+/* The payload volume follows the firmware volume, and the block device needs a
+   512-byte aligned base, so the shim pads itself to one sector first. */
+.balign 512
 _Payload:

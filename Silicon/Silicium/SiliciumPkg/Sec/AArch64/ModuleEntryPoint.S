@@ -13,6 +13,11 @@
 .set CTRL_SPAN_BIT, BIT23
 
 ASM_FUNC (_ModuleEntryPoint)
+  // Keep the second argument the previous stage passes in x1: the boot shim puts
+  // the payload volume address there, and x1 is scratch from here on.
+  adr   x2, ASM_PFX (gSecEntryArg1)
+  str   x1, [x2]
+
   // The previous stage may enter with SPSel=0. Exceptions are then taken on
   // the stale SP_EL1 instead of the stack set up below, so select SP_ELx
   // first; the stack pointer written in MainEntryPoint is then SP_EL1.
@@ -82,4 +87,10 @@ ASM_PFX (MainEntryPoint):
   .align 3
   .global ASM_PFX (gSecEntryArg0)
 ASM_PFX (gSecEntryArg0):
+  .quad 0
+
+  // Second argument: the payload volume the boot shim appended to the image
+  .align 3
+  .global ASM_PFX (gSecEntryArg1)
+ASM_PFX (gSecEntryArg1):
   .quad 0
