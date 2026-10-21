@@ -1,0 +1,31 @@
+# The legacy v0 container, kept as the fallback for `fastboot boot`.
+#
+# The device flashes and boots a v4 image (boot_a/vendor_boot_a are v4, page 4096,
+# kernel_addr 0x8000, ramdisk_addr 0x1000000, tags 0x100, header_size 1584), and
+# fuxi.toml is the file the flashed image uses. The fuxi ABL's fastboot `boot`
+# command, however, refuses a v4 image with
+#
+#   Failed to load/authenticate boot image: Invalid Parameter
+#
+# on hardware, while the same firmware volume booted from a v0 image on the
+# sibling SM8550 platform. So `fastboot boot` experiments use this file; the
+# flash path keeps fuxi.toml. Nothing here is used by the firmware build — only
+# [boot_image] differs.
+
+[boot_shim]
+requires_kernel_header = true
+
+[uefi_fd]
+base = 0xA7100000
+size = 0x300000
+
+[boot_image_kernel]
+kernel_compression = "gzip"
+append_dtb         = true
+
+[boot_image]
+header_version = 0
+base = 0x00000000
+kernel_offset = 0x00008000
+tags_offset = 0x01e00000
+pagesize = 4096
