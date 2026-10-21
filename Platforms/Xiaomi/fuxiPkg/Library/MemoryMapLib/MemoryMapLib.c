@@ -88,6 +88,11 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"FV Region", 0xA7AD9000, 0x400000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"UEFI RESV", 0xA7ED9000, 0x127000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"Kernel", 0xA8000000, 0x10000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},   // UEFI layout
+  // The DXE heap must be named exactly "DXE Heap": SiliciumPkg/Sec/Sec.c looks the region up by
+  // name to build the HOB list and the memory HOBs, and stops with "Failed to Locate DXE Heap
+  // Memory Region" without it. sheng's 0x0D1C0000 geometry lies in the same free DRAM here, between
+  // the kernel window and the mpss_dsm carveout at 0xD4D00000.
+  {"DXE Heap", 0xBAB00000, 0x0D1C0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK},
   // The DT calls this /reserved-memory/splash_region (label cont_splash_region); the row keeps the name
   // FuxiGopLogDxe looks for. Same range as the device tree, 0xB8000000 + 0x2B00000.
   {"Display Reserved", 0xB8000000, 0x2B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},   // DT splash_region
@@ -98,7 +103,7 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"DRAM 0x82800000", 0x82800000, 0x8000000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x9b09c000", 0x9B09C000, 0x64000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xa4a81000", 0xA4A81000, 0x257F000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
-  {"DRAM 0xbab00000", 0xBAB00000, 0x1A200000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
+  {"DRAM 0xc7cc0000", 0xC7CC0000, 0x0D040000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts minus the DXE heap
   {"DRAM 0xe7cb0000", 0xE7CB0000, 0xFE4C000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xfc400000", 0xFC400000, 0x3400000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0xffe00000", 0xFFE00000, 0x200000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
