@@ -1,0 +1,21 @@
+# The fuxi (Xiaomi 13, SM8550) container, read from the device, not guessed.
+#
+# boot_a and vendor_boot_a are Android boot header v4: "ANDROID!" / "VNDRBOOT!",
+# page size 4096, kernel_addr 0x8000, ramdisk_addr 0x1000000, tags 0x100,
+# boot header_size 1584, kernel 48,441,856 B, vendor_boot DTB 2,903,083 B.
+# v4 carries no base / kernel_offset / tags_offset / pagesize fields, so this
+# file has the same shape as nuwa.toml and none of the legacy v0 keys.
+
+[boot_shim]
+requires_kernel_header = true
+
+[uefi_fd]
+base = 0xA7100000
+size = 0x300000
+
+[boot_image_kernel]
+kernel_compression = "gzip"
+append_dtb         = true
+
+[boot_image]
+header_version = 4
