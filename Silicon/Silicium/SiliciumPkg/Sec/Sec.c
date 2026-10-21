@@ -4,6 +4,7 @@
 **/
 
 #include <Library/PcdLib.h>
+#include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/PrePiLib.h>
 #include <Library/DebugAgentLib.h>
@@ -173,6 +174,29 @@ SecMain (VOID)
   // Linux-style boot loader), so a DXE driver can use it.
   {
     UINT64  EntryArg = gSecEntryArg0;
+
+    //
+    // Reserve the device tree the previous stage handed over in x0.
+    //
+    // Nothing else marks those bytes as owned, so DXE treats them as free and
+    // maps images straight over them: on fuxi the tree sits at 0x00C5B1D0 and
+    // DarwinBoot was loaded at exactly that address, which destroyed the tree
+    // and made the board driver walk garbage ranges into a second-level
+    // translation fault. BuildMemoryAllocationHob wants a page-aligned base
+    // and length, and the ABL's tree is not page aligned, so round outwards.
+    //
+    if ((EntryArg != 0) && ((EntryArg & 3) == 0)) {
+      UINT32  DtMagic = SwapBytes32 (*(UINT32 *)(UINTN)EntryArg);
+      UINT32  DtSize  = SwapBytes32 (*(UINT32 *)(UINTN)(EntryArg + 4));
+
+      if ((DtMagic == 0xD00DFEED) && (DtSize > 0x1000) && (DtSize < 0x400000)) {
+        UINT64  DtBase = EntryArg & ~(UINT64)(EFI_PAGE_SIZE - 1);
+        UINT64  DtEnd  = (EntryArg + DtSize + EFI_PAGE_SIZE - 1) & ~(UINT64)(EFI_PAGE_SIZE - 1);
+
+        BuildMemoryAllocationHob (DtBase, DtEnd - DtBase, EfiReservedMemoryType);
+        DEBUG ((EFI_D_WARN, "SEC: reserved DT 0x%lx..0x%lx\n", DtBase, DtEnd));
+      }
+    }
 
     BuildGuidDataHob (&gSiliciumEntryArgHobGuid, &EntryArg, sizeof (EntryArg));
   }
