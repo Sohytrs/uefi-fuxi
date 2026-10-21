@@ -4,7 +4,10 @@ _Head:
 
 #if REQUIRES_KERNEL_HEADER == 1
 _StackBase:
-  .quad FD_BASE         /* Text Offset */
+#ifndef TEXT_OFFSET
+#define TEXT_OFFSET FD_BASE
+#endif
+  .quad TEXT_OFFSET     /* Text Offset: the kernel load address the bootloader is told to use */
 
 _StackSize:
   .quad FD_SIZE + (_Payload - _Head) /* Complete shim and payload */

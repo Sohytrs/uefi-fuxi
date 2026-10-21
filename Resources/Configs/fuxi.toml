@@ -19,3 +19,8 @@ append_dtb         = true
 
 [boot_image]
 header_version = 4
+# The fuxi ABL loads the boot image at its own address and refuses an ARM64 header that claims
+# the firmware address, so the shim is told to advertise text offset 0 and copies the volume
+# down itself. Measured on hardware: with FD_BASE in the header the ABL answers
+# "Failed to load image from partition: Load Error" for every otherwise valid image.
+text_offset    = 0
