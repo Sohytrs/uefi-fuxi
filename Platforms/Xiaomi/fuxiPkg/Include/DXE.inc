@@ -49,13 +49,16 @@
 !endif
 
   INF MdeModulePkg/Universal/DevicePathDxe/DevicePathDxe.inf
-  INF fuxiPkg/Drivers/FuxiBootMemoryDxe/FuxiBootMemoryDxe.inf
   # The XNU loader is part of the firmware: a driver loaded from a volume is
   # refused by the image verification of this build.
   INF DarwinBootPkg/Driver/DarwinBoot.inf
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
   INF FatPkg/EnhancedFatDxe/Fat.inf
+  # The memory driver publishes the payload volume as a BlockIo, so it has to be
+  # dispatched after the drivers that turn one into a file system (DiskIo,
+  # Partition, Fat) and before BDS runs the menu application.
+  INF fuxiPkg/Drivers/FuxiBootMemoryDxe/FuxiBootMemoryDxe.inf
   INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
 
 !if $(FUXI_VENDOR_HW) == 1

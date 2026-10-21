@@ -56,6 +56,10 @@ APRIORI DXE {
 !endif
 
   INF FatPkg/EnhancedFatDxe/Fat.inf
+  # The memory driver publishes the payload volume as a BlockIo. It must be
+  # dispatched after DiskIo/Partition/Fat: APRIORI is what sets that order, not
+  # the position of the INF in DXE.inc.
+  INF fuxiPkg/Drivers/FuxiBootMemoryDxe/FuxiBootMemoryDxe.inf
 
 !if $(FUXI_VENDOR_HW) == 1
   INF Binaries/nuwa/QcomPkg/Drivers/PmicDxe/PmicDxeLa.inf

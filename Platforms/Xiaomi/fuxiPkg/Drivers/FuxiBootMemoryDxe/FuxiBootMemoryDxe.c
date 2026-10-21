@@ -27,6 +27,11 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/BlockIo.h>
 #include <Protocol/DevicePath.h>
+#include <Protocol/SimpleFileSystem.h>
+#include <Protocol/DiskIo.h>
+
+// The stub experiment keeps the helpers for the next iteration.
+#define FUXI_UNUSED  __attribute__((unused))
 
 #define MAX_RANGES        64
 // UNVERIFIED(fuxi): sheng board value; needs the fuxi PMIC/DT confirmation.
@@ -155,6 +160,7 @@ Subtract (
 }
 
 STATIC
+FUXI_UNUSED
 VOID
 AddMemory (
   IN CONST VOID  *Fdt
@@ -303,6 +309,65 @@ STATIC RAM_BLOCK_DEVICE_PATH  mDevicePath = {
 
 STATIC UINT8                    *mRamBase;
 STATIC EFI_BLOCK_IO_MEDIA       mMedia;
+STATIC EFI_HANDLE               mVolumeHandle;
+STATIC UINTN                    mConnectTries;
+
+//
+// Connect the volume once DXE has finished dispatching. The drivers that turn a
+// BlockIo into a file system (Partition, DiskIo, Fat) are dispatched after this
+// one, and a driver with a DEPEX is not connected to controllers on its own, so
+// connecting here and now finds nothing to bind. A short periodic timer runs in
+// the event loop after dispatch, before BDS starts the menu, and binds the
+// chain for real.
+//
+STATIC
+VOID
+FUXI_UNUSED
+EFIAPI
+ConnectVolume (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  EFI_HANDLE  *Handles;
+  UINTN       Count;
+
+  if (mVolumeHandle != NULL) {
+    gBS->ConnectController (mVolumeHandle, NULL, NULL, TRUE);
+  }
+
+  Handles = NULL;
+  Count   = 0;
+  if (!EFI_ERROR (gBS->LocateHandleBuffer (AllHandles, NULL, NULL, &Count, &Handles))) {
+    for (UINTN Index = 0; Index < Count; Index++) {
+      gBS->ConnectController (Handles[Index], NULL, NULL, TRUE);
+    }
+
+    FreePool (Handles);
+  }
+
+  {
+    EFI_HANDLE  *Volumes;
+    UINTN       Count;
+
+    Volumes = NULL;
+    Count   = 0;
+    if (!EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiSimpleFileSystemProtocolGuid, NULL, &Count, &Volumes))) {
+      FreePool (Volumes);
+    }
+
+    if (Count > 0) {
+      DEBUG ((DEBUG_ERROR, "FUXIMEM: %u file system(s) up after %u connect rounds\n", Count, mConnectTries + 1));
+      gBS->CloseEvent (Event);
+      return;
+    }
+  }
+
+  if (++mConnectTries >= 40) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: no file system after %u connect rounds\n", mConnectTries));
+    gBS->CloseEvent (Event);
+  }
+}
 
 STATIC
 EFI_STATUS
@@ -381,41 +446,13 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
 
 STATIC
 VOID
-PublishInitrd (
-  IN CONST VOID  *Fdt
+PublishVolume (
+  IN UINT64  Start,
+  IN UINT64  Size
   )
 {
   EFI_STATUS  Status;
-  INT32       Chosen;
-  CONST VOID  *StartProp;
-  CONST VOID  *EndProp;
-  INT32       StartLength;
-  INT32       EndLength;
-  UINT64      Start;
-  UINT64      End;
   EFI_HANDLE  Handle;
-
-  Chosen = FdtPathOffset (Fdt, "/chosen");
-  if (Chosen < 0) {
-    DEBUG ((DEBUG_ERROR, "FUXIMEM: no /chosen\n"));
-    return;
-  }
-
-  StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
-  EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
-  if ((StartProp == NULL) || (EndProp == NULL) ||
-      ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
-  {
-    DEBUG ((DEBUG_ERROR, "FUXIMEM: no initrd in /chosen\n"));
-    return;
-  }
-
-  Start = ReadCells (StartProp, StartLength / 4);
-  End   = ReadCells (EndProp, EndLength / 4);
-  if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
-    DEBUG ((DEBUG_ERROR, "FUXIMEM: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
-    return;
-  }
 
   mRamBase                = (UINT8 *)(UINTN)Start;
   mMedia.MediaId          = 1;
@@ -426,7 +463,7 @@ PublishInitrd (
   mMedia.WriteCaching     = FALSE;
   mMedia.BlockSize        = RAM_BLOCK_SIZE;
   mMedia.IoAlign          = 1;
-  mMedia.LastBlock        = (End - Start) / RAM_BLOCK_SIZE - 1;
+  mMedia.LastBlock        = Size / RAM_BLOCK_SIZE - 1;
 
   Handle = NULL;
   Status = gBS->InstallMultipleProtocolInterfaces (
@@ -437,7 +474,175 @@ PublishInitrd (
                   &mBlockIo,
                   NULL
                   );
-  DEBUG ((DEBUG_ERROR, "FUXIMEM: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
+  DEBUG ((DEBUG_ERROR, "FUXIMEM: volume block device 0x%lx size 0x%lx %r\n", Start, Size, Status));
+  if (EFI_ERROR (Status)) {
+    return;
+  }
+
+  mVolumeHandle = Handle;
+
+  //
+  // Bind the drivers that turn a BlockIo into a file system. This handle is
+  // installed while DXE is still dispatching, so PartitionDxe, DiskIoDxe and
+  // FatPkg have not registered their notifications yet and nothing would ever
+  // connect it: the menu would scan zero volumes and report "no boot entry
+  // found". Connect every handle a few times so the chain is up before the
+  // application runs.
+  //
+  Status = gBS->ConnectController (Handle, NULL, NULL, TRUE);
+  DEBUG ((DEBUG_ERROR, "FUXIMEM: connect %r\n", Status));
+  for (UINTN Pass = 0; Pass < 2; Pass++) {
+    EFI_HANDLE  *Handles;
+    UINTN       Count;
+
+    Handles = NULL;
+    Count   = 0;
+    if (!EFI_ERROR (gBS->LocateHandleBuffer (AllHandles, NULL, NULL, &Count, &Handles))) {
+      for (UINTN Index = 0; Index < Count; Index++) {
+        gBS->ConnectController (Handles[Index], NULL, NULL, TRUE);
+      }
+
+      FreePool (Handles);
+    }
+
+    gBS->Stall (50 * 1000);
+  }
+
+  {
+    EFI_HANDLE  *Handles;
+    UINTN       Blocks;
+    UINTN       Disks;
+    UINTN       Volumes;
+
+    Handles = NULL;
+    Blocks  = 0;
+    if (!EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiBlockIoProtocolGuid, NULL, &Blocks, &Handles))) {
+      FreePool (Handles);
+    }
+
+    Handles = NULL;
+    Disks   = 0;
+    if (!EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiDiskIoProtocolGuid, NULL, &Disks, &Handles))) {
+      FreePool (Handles);
+    }
+
+    Handles = NULL;
+    Volumes = 0;
+    if (!EFI_ERROR (gBS->LocateHandleBuffer (ByProtocol, &gEfiSimpleFileSystemProtocolGuid, NULL, &Volumes, &Handles))) {
+      FreePool (Handles);
+    }
+
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: after connect: %u block, %u disk, %u file system\n", Blocks, Disks, Volumes));
+  }
+}
+
+//
+// Publish the payload volume the boot shim appended to the image, addressed by
+// the FAT boot sector at its start. Used when the bootloader hands over no
+// initrd (fuxi's ABL keeps the ramdisk in vendor_boot, so a boot image ramdisk
+// never reaches the firmware).
+//
+STATIC
+VOID
+PublishPayload (
+  IN UINT64  Base
+  )
+{
+  CONST UINT8  *Bpb;
+  UINT32       SectorBytes;
+  UINT32       TotalSectors;
+
+  if ((Base == 0) || ((Base & 0x1FF) != 0)) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: no payload volume (x1 0x%lx)\n", Base));
+    return;
+  }
+
+  Bpb = (CONST UINT8 *)(UINTN)Base;
+  DEBUG ((DEBUG_ERROR, "FUXIMEM: payload head %02x %02x %02x %02x sig %02x%02x\n",
+          Bpb[0], Bpb[1], Bpb[2], Bpb[3], Bpb[0x1FF], Bpb[0x1FE]));
+  if (*(UINT16 *)(Bpb + 0x1FE) != 0xAA55) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: x1 0x%lx is not a FAT boot sector or MBR\n", Base));
+    return;
+  }
+
+  //
+  // Decide what the image is by parsing, not by looking for a partition-type
+  // byte: a bare FAT boot sector also has bytes in the partition-table area
+  // (they are boot code), so a type-byte test mistakes it for an MBR.
+  //
+  SectorBytes  = *(UINT16 *)(Bpb + 0x0B);
+  TotalSectors = *(UINT16 *)(Bpb + 0x13);
+  if (TotalSectors == 0) {
+    TotalSectors = *(UINT32 *)(Bpb + 0x20);
+  }
+
+  if ((SectorBytes != RAM_BLOCK_SIZE) || (TotalSectors == 0)) {
+    //
+    // Not a FAT boot sector: try an MBR with one partition.
+    //
+    UINT32  PartStart = *(UINT32 *)(Bpb + 0x1BE + 8);
+    UINT32  PartCount = *(UINT32 *)(Bpb + 0x1BE + 12);
+
+    if ((PartStart != 0) && (PartCount != 0)) {
+      TotalSectors = PartStart + PartCount;
+      SectorBytes  = RAM_BLOCK_SIZE;
+      DEBUG ((DEBUG_ERROR, "FUXIMEM: payload MBR partition at %u, %u sectors\n", PartStart, PartCount));
+    } else {
+      TotalSectors = 0;
+      SectorBytes  = 0;
+    }
+  } else {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: payload is a bare FAT, %u sectors\n", TotalSectors));
+  }
+
+  if ((SectorBytes != RAM_BLOCK_SIZE) || (TotalSectors == 0)) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: payload sector %u total %u is unusable\n", SectorBytes, TotalSectors));
+    return;
+  }
+
+  DEBUG ((DEBUG_ERROR, "FUXIMEM: payload volume at 0x%lx, %u sectors\n", Base, TotalSectors));
+  PublishVolume (Base, (UINT64)TotalSectors * SectorBytes);
+}
+
+STATIC
+FUXI_UNUSED
+BOOLEAN
+PublishInitrd (
+  IN CONST VOID  *Fdt
+  )
+{
+  INT32       Chosen;
+  CONST VOID  *StartProp;
+  CONST VOID  *EndProp;
+  INT32       StartLength;
+  INT32       EndLength;
+  UINT64      Start;
+  UINT64      End;
+
+  Chosen = FdtPathOffset (Fdt, "/chosen");
+  if (Chosen < 0) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: no /chosen\n"));
+    return FALSE;
+  }
+
+  StartProp = FdtGetProp (Fdt, Chosen, "linux,initrd-start", &StartLength);
+  EndProp   = FdtGetProp (Fdt, Chosen, "linux,initrd-end", &EndLength);
+  if ((StartProp == NULL) || (EndProp == NULL) ||
+      ((StartLength != 4) && (StartLength != 8)) || ((EndLength != 4) && (EndLength != 8)))
+  {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: no initrd in /chosen\n"));
+    return FALSE;
+  }
+
+  Start = ReadCells (StartProp, StartLength / 4);
+  End   = ReadCells (EndProp, EndLength / 4);
+  if ((End <= Start) || (((End - Start) % RAM_BLOCK_SIZE) != 0)) {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: initrd 0x%lx-0x%lx is not a whole number of sectors\n", Start, End));
+    return FALSE;
+  }
+
+  PublishVolume (Start, End - Start);
+  return TRUE;
 }
 
 EFI_STATUS
@@ -449,6 +654,7 @@ FuxiBootMemoryDxeEntry (
 {
   EFI_HOB_GUID_TYPE  *Hob;
   UINT64             Dtb;
+  UINT64             Payload;
 
   Hob = GetFirstGuidHob (&gSiliciumEntryArgHobGuid);
   if (Hob == NULL) {
@@ -456,15 +662,29 @@ FuxiBootMemoryDxeEntry (
     return EFI_SUCCESS;
   }
 
-  Dtb = *(UINT64 *)GET_GUID_HOB_DATA (Hob);
+  Dtb     = ((UINT64 *)GET_GUID_HOB_DATA (Hob))[0];
+  Payload = ((UINT64 *)GET_GUID_HOB_DATA (Hob))[1];
+
+  DEBUG ((DEBUG_ERROR, "FUXIMEM: x0 0x%lx x1 0x%lx\n", Dtb, Payload));
+
+  //
+  // The payload volume does not depend on the device tree, so publish it first:
+  // a tree the previous stage did not hand over must not cost the menu its only
+  // volume.
+  //
+  PublishPayload (Payload);
+
   if ((Dtb == 0) || ((Dtb & 3) != 0) || (FdtCheckHeader ((VOID *)(UINTN)Dtb) != 0)) {
     DEBUG ((DEBUG_ERROR, "FUXIMEM: x0 0x%lx is not a device tree\n", Dtb));
-    return EFI_SUCCESS;
+  } else {
+    DEBUG ((DEBUG_ERROR, "FUXIMEM: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
+    AddMemory ((VOID *)(UINTN)Dtb);
+    if (!PublishInitrd ((VOID *)(UINTN)Dtb)) {
+      DEBUG ((DEBUG_ERROR, "FUXIMEM: no initrd volume\n"));
+    }
   }
 
-  DEBUG ((DEBUG_ERROR, "FUXIMEM: device tree at 0x%lx, %u bytes\n", Dtb, (UINT32)FdtTotalSize ((VOID *)(UINTN)Dtb)));
-
-  AddMemory ((VOID *)(UINTN)Dtb);
-  PublishInitrd ((VOID *)(UINTN)Dtb);
   return EFI_SUCCESS;
 }
+
+

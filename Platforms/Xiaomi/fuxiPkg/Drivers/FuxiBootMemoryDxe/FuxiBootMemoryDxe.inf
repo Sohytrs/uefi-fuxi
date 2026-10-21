@@ -31,6 +31,8 @@
 [Protocols]
   gEfiBlockIoProtocolGuid                       ## PRODUCES
   gEfiDevicePathProtocolGuid                    ## PRODUCES
+  gEfiDiskIoProtocolGuid                        ## CONSUMES
+  gEfiSimpleFileSystemProtocolGuid              ## CONSUMES
 
 [Depex]
   TRUE
