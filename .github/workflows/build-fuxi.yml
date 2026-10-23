@@ -1,0 +1,46 @@
+name: Build UEFI for fuxi
+
+on:
+  workflow_dispatch:
+
+env:
+  CI_BUILD: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Show platform presence
+        run: |
+          ls -la Platforms/Xiaomi/fuxiPkg || true
+          ls -la Platforms/Xiaomi/fuxiPkg/FdtBlob || true
+
+      - name: Install build environment
+        run: bash ./setup_env.sh -p apt
+
+      - name: Build UEFI for fuxi
+        run: ./build_uefi.py -d fuxi -r DEBUG -c -m 0
+
+      - name: Collect images
+        if: always()
+        run: |
+          echo "--- Mu-* artefacts ---"
+          ls -la Mu-* 2>/dev/null || echo "no Mu-* produced"
+          find . -maxdepth 2 -name '*.fd' -o -maxdepth 2 -name 'Mu-*' | head -20
+
+      - name: Upload UEFI images
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: uefi-fuxi
+          path: |
+            Mu-*
+            **/*.fd
+          compression-level: 9
+          if-no-files-found: warn
