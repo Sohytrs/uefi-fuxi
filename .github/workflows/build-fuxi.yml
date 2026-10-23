@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       unixnu_repo:
-        description: "UniXNU core repository (provides package/UniXNUPkg)"
+        description: "UniXNU core repository (provides package/UniXNUPkg and drivers/DarwinBoot)"
         default: "matejkoo217/UniXNU"
         required: true
 
@@ -14,24 +14,45 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 150
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Clone the UniXNU core next to the workspace
+      - name: Clone the UniXNU core with its driver submodules
         run: |
           set -euo pipefail
           target="$(dirname "$GITHUB_WORKSPACE")/UniXNU"
           rm -rf "$target"
-          git clone --depth 1 "https://github.com/${{ inputs.unixnu_repo }}.git" "$target"
+          git clone --depth 1 --recurse-submodules --shallow-submodules \
+            "https://github.com/${{ inputs.unixnu_repo }}.git" "$target"
           echo "UNIXNU_ROOT=$target" >> "$GITHUB_ENV"
           echo "--- core package/ ---"
-          ls "$target" | head -20
-          echo "--- package/ ---"
-          ls "$target/package" | head -20
+          ls "$target/package"
+          echo "--- drivers/DarwinBoot ---"
+          ls "$target/drivers/DarwinBoot" | head -20
+
+      - name: Teach fuxiPkg where the driver packages live
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, pathlib
+          p = pathlib.Path("Platforms/Xiaomi/fuxiPkg/DeviceBuild.py")
+          s = p.read_text()
+          needle = '"Silicium-ACPI/Silicon/Qualcomm"'
+          if needle not in s:
+              raise SystemExit("PackagesPath tail not found")
+          root = 'os.environ.get("UNIXNU_ROOT", os.path.join(WorkspaceRoot, "..", "UniXNU"))'
+          extra = ',\n ' + root + ', "drivers", "DarwinBoot"'
+          s = s.replace(needle, needle + extra, 1)
+          p.write_text(s)
+          print("patched PackagesPath:")
+          for line in s.splitlines():
+              if "DarwinBoot" in line or "Qualcomm" in line:
+                  print("   ", line.strip())
+          PY
 
       - name: Show fuxi platform presence
         run: |
@@ -49,7 +70,7 @@ jobs:
         run: |
           echo "--- artefacts ---"
           ls -la Mu-* 2>/dev/null || echo "no Mu-* produced"
-          find . -maxdepth 3 -name '*.fd' | head -20
+          find . -maxdepth 4 -name '*.fd' | head -20
 
       - name: Upload UEFI images
         if: always()
