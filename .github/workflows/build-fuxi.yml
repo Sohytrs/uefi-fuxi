@@ -29,38 +29,42 @@ jobs:
           git clone --depth 1 --recurse-submodules --shallow-submodules \
             "https://github.com/${{ inputs.unixnu_repo }}.git" "$target"
           echo "UNIXNU_ROOT=$target" >> "$GITHUB_ENV"
-          echo "--- core package/ ---"
-          ls "$target/package"
-          echo "--- drivers/DarwinBoot ---"
-          ls "$target/drivers/DarwinBoot" | head -20
+          ls "$target/package" | head
+          ls "$target/drivers/DarwinBoot" | head
 
       - name: Teach fuxiPkg where the driver packages live
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import os, pathlib
+          import pathlib
           p = pathlib.Path("Platforms/Xiaomi/fuxiPkg/DeviceBuild.py")
           s = p.read_text()
           needle = '"Silicium-ACPI/Silicon/Qualcomm"'
           if needle not in s:
               raise SystemExit("PackagesPath tail not found")
           root = 'os.environ.get("UNIXNU_ROOT", os.path.join(WorkspaceRoot, "..", "UniXNU"))'
-          extra = ',\n ' + root + ', "drivers", "DarwinBoot"'
-          s = s.replace(needle, needle + extra, 1)
+          s = s.replace(needle, needle + ',\n ' + root + ', "drivers", "DarwinBoot"', 1)
           p.write_text(s)
-          print("patched PackagesPath:")
-          for line in s.splitlines():
-              if "DarwinBoot" in line or "Qualcomm" in line:
-                  print("   ", line.strip())
+          print("\n".join(l for l in s.splitlines() if "DarwinBoot" in l or "Qualcomm" in l))
           PY
 
-      - name: Show fuxi platform presence
+      - name: Install build environment (targeted, no full-upgrade)
         run: |
-          ls -la Platforms/Xiaomi/fuxiPkg
-          ls -la Platforms/Xiaomi/fuxiPkg/FdtBlob
-
-      - name: Install build environment
-        run: bash ./setup_env.sh -p apt
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential uuid-dev nasm acpica-tools \
+            python3 python3-pip python3-venv python3-dev \
+            git clang llvm lld gcc-aarch64-linux-gnu \
+            gettext locales gnupg ca-certificates curl libssl-dev pkg-config
+          sudo locale-gen en_US.UTF-8 || true
+          python3 -m pip install --break-system-packages --upgrade pip
+          python3 -m pip install --break-system-packages -r pip-requirements.txt
+          echo "--- toolchain ---"
+          clang --version | head -1
+          nasm -v
+          iasl -v 2>&1 | head -2
+          aarch64-linux-gnu-gcc --version | head -1
 
       - name: Build UEFI for fuxi
         run: ./build_uefi.py -d fuxi -r DEBUG -c -m 0
