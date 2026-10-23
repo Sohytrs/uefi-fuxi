@@ -56,7 +56,8 @@ jobs:
             build-essential uuid-dev nasm acpica-tools \
             python3 python3-pip python3-venv python3-dev \
             git clang llvm lld gcc-aarch64-linux-gnu \
-            gettext locales gnupg ca-certificates curl libssl-dev pkg-config
+            gettext locales gnupg ca-certificates curl libssl-dev pkg-config \
+            mono-devel unzip
           sudo locale-gen en_US.UTF-8 || true
           python3 -m pip install --break-system-packages --upgrade pip
           python3 -m pip install --break-system-packages -r pip-requirements.txt
