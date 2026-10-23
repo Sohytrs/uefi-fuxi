@@ -43,7 +43,7 @@ jobs:
           if needle not in s:
               raise SystemExit("PackagesPath tail not found")
           root = 'os.environ.get("UNIXNU_ROOT", os.path.join(WorkspaceRoot, "..", "UniXNU"))'
-          s = s.replace(needle, needle + ',\n ' + root + ', "drivers", "DarwinBoot"', 1)
+          s = s.replace(needle, needle + ',\n os.path.join(' + root + ', "drivers", "DarwinBoot")', 1)
           p.write_text(s)
           print("\n".join(l for l in s.splitlines() if "DarwinBoot" in l or "Qualcomm" in l))
           PY
