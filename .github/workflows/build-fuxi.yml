@@ -2,6 +2,11 @@ name: Build UEFI for fuxi
 
 on:
   workflow_dispatch:
+    inputs:
+      unixnu_repo:
+        description: "UniXNU core repository (provides package/UniXNUPkg)"
+        default: "matejkoo217/UniXNU"
+        required: true
 
 env:
   CI_BUILD: true
@@ -9,17 +14,29 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Show platform presence
+      - name: Clone the UniXNU core next to the workspace
         run: |
-          ls -la Platforms/Xiaomi/fuxiPkg || true
-          ls -la Platforms/Xiaomi/fuxiPkg/FdtBlob || true
+          set -euo pipefail
+          target="$(dirname "$GITHUB_WORKSPACE")/UniXNU"
+          rm -rf "$target"
+          git clone --depth 1 "https://github.com/${{ inputs.unixnu_repo }}.git" "$target"
+          echo "UNIXNU_ROOT=$target" >> "$GITHUB_ENV"
+          echo "--- core package/ ---"
+          ls "$target" | head -20
+          echo "--- package/ ---"
+          ls "$target/package" | head -20
+
+      - name: Show fuxi platform presence
+        run: |
+          ls -la Platforms/Xiaomi/fuxiPkg
+          ls -la Platforms/Xiaomi/fuxiPkg/FdtBlob
 
       - name: Install build environment
         run: bash ./setup_env.sh -p apt
@@ -30,9 +47,9 @@ jobs:
       - name: Collect images
         if: always()
         run: |
-          echo "--- Mu-* artefacts ---"
+          echo "--- artefacts ---"
           ls -la Mu-* 2>/dev/null || echo "no Mu-* produced"
-          find . -maxdepth 2 -name '*.fd' -o -maxdepth 2 -name 'Mu-*' | head -20
+          find . -maxdepth 3 -name '*.fd' | head -20
 
       - name: Upload UEFI images
         if: always()
