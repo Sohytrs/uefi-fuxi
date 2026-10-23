@@ -67,6 +67,13 @@ jobs:
           iasl -v 2>&1 | head -2
           aarch64-linux-gnu-gcc --version | head -1
 
+      - name: Provide the fuxi device tree
+        run: |
+          set -euo pipefail
+          mkdir -p Resources/DTBs
+          cp Platforms/Xiaomi/fuxiPkg/FdtBlob/sm8550-xiaomi-fuxi.dtb Resources/DTBs/fuxi.dtb
+          ls -l Resources/DTBs/fuxi.dtb
+
       - name: Build UEFI for fuxi
         run: ./build_uefi.py -d fuxi -r DEBUG -c -m 0
 
