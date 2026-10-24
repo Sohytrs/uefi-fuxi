@@ -67,14 +67,16 @@ jobs:
           iasl -v 2>&1 | head -2
           aarch64-linux-gnu-gcc --version | head -1
 
-      - name: Swap in fuxi's own UEFI drivers
+      - name: Swap in fuxi's own USB drivers
         run: |
           set -euo pipefail
           python3 tools/extract-fuxi-drivers.py Resources/fuxi/uefi_a.bin ${GITHUB_WORKSPACE}
-          sed -i 's#Binaries/nuwa#Binaries/fuxi#g' \
+          # Only the USB stack: the full swap aborted during dispatch, and the
+          # rest of the nuwa chain already brings up UFS and the panel.
+          sed -i -E 's#Binaries/nuwa/(QcomPkg/Drivers/(XhciDxe|UsbPwrCtrlDxe|UsbConfigDxe|UsbDeviceDxe|UsbMsdDxe|UsbInitDxe|UsbfnDwc3Dxe|UCDxe)/)#Binaries/fuxi/\1#g' \
             Platforms/Xiaomi/fuxiPkg/Include/DXE.inc \
             Platforms/Xiaomi/fuxiPkg/Include/APRIORI.inc
-          find Binaries/fuxi -name '*.inf' | wc -l
+          grep -c 'Binaries/fuxi' Platforms/Xiaomi/fuxiPkg/Include/DXE.inc || true
 
       - name: Provide the fuxi device tree
         run: |
