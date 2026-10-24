@@ -25,7 +25,6 @@
 
 STATIC EFI_EVENT  mTimer;
 STATIC UINTN      mTicks;
-STATIC BOOLEAN    mSaved;
 
 STATIC
 EFI_FILE_PROTOCOL *
@@ -96,7 +95,6 @@ CaptureScreen (
   EFI_STATUS                     Status;
   EFI_GRAPHICS_OUTPUT_PROTOCOL   *Gop;
   EFI_GRAPHICS_OUTPUT_MODE_INFORMATION *Info;
-  UINTN                          SizeOfInfo;
   UINT8                          Header[54];
   UINT8                          *Buffer;
   UINTN                          Width;
@@ -237,7 +235,6 @@ OnTimer (
 
   WriteReport (Root, Blocks, Filesystems);
   CaptureScreen (Root);
-  mSaved = TRUE;
   Root->Close (Root);
 }
 
@@ -252,7 +249,6 @@ FuxiDiagEntry (
   (VOID)SystemTable;
   mTimer  = NULL;
   mTicks  = 0;
-  mSaved  = FALSE;
 
   if (EFI_ERROR (gBS->CreateEvent (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_CALLBACK, OnTimer, NULL, &mTimer))) {
     return EFI_SUCCESS;
