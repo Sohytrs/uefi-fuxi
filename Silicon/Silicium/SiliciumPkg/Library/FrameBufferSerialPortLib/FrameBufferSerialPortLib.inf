@@ -28,3 +28,5 @@
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferDelay
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferFontScale
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferFreezeWhenFull
+  gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferAddress
+  gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferSize
