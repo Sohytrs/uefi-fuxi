@@ -95,6 +95,7 @@ READ_LOCK_STATUS   = TRUE
   # UniXNU
   INF fuxiPkg/Drivers/FuxiDiagDxe/FuxiDiagDxe.inf
 INF fuxiPkg/Drivers/FuxiLogDumpDxe/FuxiLogDumpDxe.inf
+INF fuxiPkg/Drivers/FuxiUfpLaunchDxe/FuxiUfpLaunchDxe.inf
   INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
 
