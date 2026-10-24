@@ -47,7 +47,6 @@ DumpToVolume (
   UINT8              *Ring;
   UINT32             Head;
   UINT32             Capacity;
-  UINTN              First;
   CHAR8              Header[96];
   UINTN              HeaderLength;
 
@@ -68,11 +67,7 @@ DumpToVolume (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Ring  = (UINT8 *)(UINTN)(FUXI_LOG_BUFFER_ADDRESS + sizeof (FUXI_LOG_HEADER));
-  First = Capacity - Head;
-  if (First > Capacity) {
-    First = 0;
-  }
+  Ring = (UINT8 *)(UINTN)(FUXI_LOG_BUFFER_ADDRESS + sizeof (FUXI_LOG_HEADER));
 
   /* The oldest byte sits at Head % Capacity; rotate it to the front. */
   CopyMem (Linear, Ring + (Head % Capacity), Capacity - (Head % Capacity));
@@ -184,13 +179,12 @@ FuxiLogDumpDxeEntry (
     return Status;
   }
 
-  Status = gBS->CreateEvent (EVT_TIMER, TPL_CALLBACK, NULL, NULL, &mTimerEvent);
+  Status = gBS->CreateEventEx (EVT_TIMER | EVT_NOTIFY_SIGNAL, TPL_CALLBACK, DumpHandler, NULL,
+                               NULL, &mTimerEvent);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  gBS->SetTimer (mTimerEvent, TimerPeriodic, 20 * 1000 * 1000);
-
-  Status = gBS->CreateEvent (EVT_NOTIFY_SIGNAL, TPL_CALLBACK, DumpHandler, NULL, &mTimerEvent);
+  Status = gBS->SetTimer (mTimerEvent, TimerPeriodic, 20 * 1000 * 1000);
   if (EFI_ERROR (Status)) {
     return Status;
   }
