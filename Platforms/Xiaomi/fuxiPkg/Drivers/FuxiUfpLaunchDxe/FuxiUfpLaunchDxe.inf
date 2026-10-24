@@ -1,0 +1,32 @@
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = FuxiUfpLaunchDxe
+  FILE_GUID                      = 8E31C7A4-5B2D-4F96-9D3C-77A1B4E60C58
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = FuxiUfpLaunchDxeEntry
+
+[Sources]
+  FuxiUfpLaunchDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gEfiSimpleFileSystemProtocolGuid
+
+[Guids]
+  gEfiFileInfoGuid
+
+[Depex]
+  TRUE
