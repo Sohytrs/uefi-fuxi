@@ -67,6 +67,14 @@ jobs:
           iasl -v 2>&1 | head -2
           aarch64-linux-gnu-gcc --version | head -1
 
+      - name: Swap in fuxi's own UEFI drivers
+        run: |
+          python3 tools/extract-fuxi-drivers.py Resources/fuxi/uefi_a.bin ""
+          sed -i 's#Binaries/nuwa#Binaries/fuxi#g' \
+            Platforms/Xiaomi/fuxiPkg/Include/DXE.inc \
+            Platforms/Xiaomi/fuxiPkg/Include/APRIORI.inc
+          echo "fuxi modules: "
+
       - name: Provide the fuxi device tree
         run: |
           set -euo pipefail
