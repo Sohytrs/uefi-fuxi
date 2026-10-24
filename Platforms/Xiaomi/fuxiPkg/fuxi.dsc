@@ -47,11 +47,10 @@
 
 [PcdsFixedAtBuild]
   #
-  # fuxi bring-up: USB never enumerates on the host although the SSUSB PHY reports
-  # success. Raise the debug level so the vendor driver output reaches the frame
-  # buffer log and shows where the bring-up stops.
+  # fuxi bring-up: keep only DEBUG_ERROR. DEBUG_INFO/VERBOSE floods the frame buffer
+  # log with DXE load noise and buries the few USB lines that matter.
   #
-  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80400042
+  gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80000000
 
   #
   # DDR Memory
