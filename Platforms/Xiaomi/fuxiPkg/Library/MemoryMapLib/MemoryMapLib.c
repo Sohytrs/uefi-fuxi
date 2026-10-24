@@ -127,6 +127,23 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"TLMM", 0xF000000, 0x1000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},   // SM8550 SoC
   {"SMMU", 0x15000000, 0x200000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},   // SM8550 SoC
   {"APSS_HM", 0x17000000, 0x2000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},   // SM8550 SoC
+
+  //
+  // Peripheral register windows. The vendor HAL maps these before it touches a
+  // controller; without a descriptor the call fails with
+  //   Failed to map PhysicalAddr:0x...., size:0x....
+  // UFS is the one that matters for storage: UFSDxe asks for 0x1D80000/0x20000,
+  // which covers ufs_mem 0x1D84000, ufs_ice 0x1D88000 and ufs_ice_hwkm 0x1D90000
+  // from the fuxi device tree. Addresses come from the same tree.
+  //
+  {"UFS", 0x1D80000, 0x20000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"USB3", 0xA600000, 0x100000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"USB2_QSCRATCH", 0x1FC0000, 0x10000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"SPMI", 0xC400000, 0x100000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"QUP1", 0xAC0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"QUP2", 0x8C0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"QUP_I2C", 0x9C0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
+  {"TLMM", 0xF100000, 0x300000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN}
 };
 
 VOID
