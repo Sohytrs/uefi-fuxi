@@ -117,6 +117,7 @@
   fuxiPkg/Drivers/FuxiKeyInputDxe/FuxiKeyInputDxe.inf
   fuxiPkg/Drivers/FuxiDiagDxe/FuxiDiagDxe.inf
 fuxiPkg/Drivers/FuxiLogDumpDxe/FuxiLogDumpDxe.inf
+fuxiPkg/Drivers/FuxiUfpLaunchDxe/FuxiUfpLaunchDxe.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
 
 [LibraryClasses]
