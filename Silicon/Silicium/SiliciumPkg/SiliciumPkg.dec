@@ -27,6 +27,10 @@
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferDelay|0|UINT32|0x0000A003
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferFontScale|0|UINT8|0x0000A004
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferFreezeWhenFull|FALSE|BOOLEAN|0x0000A005
+# Fixed region the platform memory map reserves as "Log Buffer"; the debug library
+# appends every byte there and FuxiLogDumpDxe writes it to a file. 0 disables it.
+gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferAddress|0|UINT64|0x0000A006
+gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferSize|0|UINT32|0x0000A007
 
   #
   # Timer
