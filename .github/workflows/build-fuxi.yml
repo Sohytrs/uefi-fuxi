@@ -69,11 +69,12 @@ jobs:
 
       - name: Swap in fuxi's own UEFI drivers
         run: |
-          python3 tools/extract-fuxi-drivers.py Resources/fuxi/uefi_a.bin ""
+          set -euo pipefail
+          python3 tools/extract-fuxi-drivers.py Resources/fuxi/uefi_a.bin ${GITHUB_WORKSPACE}
           sed -i 's#Binaries/nuwa#Binaries/fuxi#g' \
             Platforms/Xiaomi/fuxiPkg/Include/DXE.inc \
             Platforms/Xiaomi/fuxiPkg/Include/APRIORI.inc
-          echo "fuxi modules: "
+          find Binaries/fuxi -name '*.inf' | wc -l
 
       - name: Provide the fuxi device tree
         run: |
