@@ -206,7 +206,7 @@ OnTimer (
   mTicks++;
 
   /* Give the boot manager time to finish drawing before the capture. */
-  if ((mTicks != 20) && (mTicks != 40)) {
+  if ((mTicks != 5) && (mTicks != 10) && (mTicks != 20) && (mTicks != 40)) {
     if (mTicks >= 60) {
       gBS->SetTimer (mTimer, TimerCancel, 0);
     }
