@@ -35,7 +35,7 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   // Name, Address, Length, HobOption, ResourceType, ResourceAttribute, MemoryType, ArmAttribute
   {"gunyah_hyp_region", 0x80000000, 0xA00000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"cpusys_vm_region", 0x80A00000, 0x400000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
-  {"xbl_dt_log_merged", 0x81A00000, 0x260000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
+  {"xbl_dt_log_merged", 0x81A00000, 0x260000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"aop_cmd_db_region", 0x81C60000, 0x20000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"aop_config_merged_region", 0x81C80000, 0x74000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"smem_region", 0x81D00000, 0x200000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
