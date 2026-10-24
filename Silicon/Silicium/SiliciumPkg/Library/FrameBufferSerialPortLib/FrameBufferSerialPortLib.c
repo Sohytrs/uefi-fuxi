@@ -293,6 +293,50 @@ LoadGeometry (
   }
 }
 
+
+/**
+  Append DEBUG output to the platform log ring the memory map reserves.
+
+  Every module links its own copy of this library, so the ring has to live at a fixed
+  physical address instead of in a static buffer: the copies would otherwise each keep
+  their own tail. A zero address leaves the ring disabled.
+**/
+STATIC
+VOID
+CaptureDebugBytes (
+  IN CONST UINT8  *Bytes,
+  IN UINTN         Count
+  )
+{
+  volatile UINT32  *Header;
+  UINT8            *Ring;
+  UINT32           Capacity;
+  UINT32           Head;
+  UINTN            Index;
+
+  if (FixedPcdGet64 (PcdDebugLogBufferAddress) == 0 ||
+      FixedPcdGet32 (PcdDebugLogBufferSize) <= 16) {
+    return;
+  }
+
+  Header   = (volatile UINT32 *)(UINTN)FixedPcdGet64 (PcdDebugLogBufferAddress);
+  Capacity = FixedPcdGet32 (PcdDebugLogBufferSize) - 16;
+  Ring     = (UINT8 *)(UINTN)(FixedPcdGet64 (PcdDebugLogBufferAddress) + 16);
+
+  if (Header[0] != 0x474C5846U) {
+    Header[0] = 0x474C5846U;
+    Header[1] = 0;
+    Header[2] = Capacity;
+    Header[3] = 0;
+  }
+
+  Head = Header[1];
+  for (Index = 0; Index < Count; Index++) {
+    Ring[(Head + Index) % Capacity] = Bytes[Index];
+  }
+  Header[1] = Head + (UINT32)Count;
+}
+
 UINTN
 EFIAPI
 SerialPortWrite (
@@ -302,6 +346,8 @@ SerialPortWrite (
   EFI_STATUS           Status;
   EFI_PHYSICAL_ADDRESS FbBase;
   UINT64               FbLength;
+
+  CaptureDebugBytes (Buffer, NumberOfBytes);
 
   // Get Frame Buffer Memory
   Status = GetFrameBufferMemory (&FbBase, &FbLength);
