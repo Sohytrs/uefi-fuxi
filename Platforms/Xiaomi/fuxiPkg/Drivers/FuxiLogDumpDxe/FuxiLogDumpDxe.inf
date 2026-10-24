@@ -18,6 +18,7 @@
   BaseMemoryLib
   DebugLib
   MemoryAllocationLib
+  PrintLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
   UefiLib
