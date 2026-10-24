@@ -1,0 +1,32 @@
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = FuxiLogDumpDxe
+  FILE_GUID                      = 5F4C1E22-77A3-4B58-9F1E-2C9E8B7A1043
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = FuxiLogDumpDxeEntry
+
+[Sources]
+  FuxiLogDumpDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  MemoryAllocationLib
+  UefiBootServicesTableLib
+  UefiDriverEntryPoint
+  UefiLib
+
+[Protocols]
+  gEfiSimpleFileSystemProtocolGuid
+
+[Guids]
+  gEfiEventExitBootServicesGuid
+
+[Depex]
+  TRUE
