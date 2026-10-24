@@ -68,7 +68,7 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"hwfence-shmem", 0xE6440000, 0x279000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"oem_vm_vblk0_ring", 0xF7AFC000, 0x4000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   {"oem_vm_swiotlb", 0xF7B00000, 0x100000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
-  {"oem_vm_region", 0xF7C00000, 0x4800000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT reserved
+  {"oem_vm_region", 0xF7C00000, 0x4800000, AddMem, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT reserved
   {"llcc_lpi_region", 0xFF800000, 0x600000, HobOnlyNoCacheSetting, MEM_RES, UNCACHEABLE, Reserv, UNCACHED_UNBUFFERED_XN},   // DT no-map
   // The live tree also carries ramoops@0xa7000000 (0xA7000000 + 0x400000), i.e. exactly the UEFI FD
   // window, because the recovery kernel reuses that space after UEFI has exited. It is deliberately
@@ -87,7 +87,7 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"Sched Heap", 0xA76D9000, 0x400000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"FV Region", 0xA7AD9000, 0x400000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
   {"UEFI RESV", 0xA7ED9000, 0x127000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK_XN},   // UEFI layout
-  {"Kernel", 0xA8000000, 0x10000000, HobOnlyNoCacheSetting, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},   // UEFI layout
+  {"Kernel", 0xA8000000, 0x10000000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_BACK_XN},   // UEFI layout
   // The DXE heap must be named exactly "DXE Heap": SiliciumPkg/Sec/Sec.c looks the region up by
   // name to build the HOB list and the memory HOBs, and stops with "Failed to Locate DXE Heap
   // Memory Region" without it. sheng's 0x0D1C0000 geometry lies in the same free DRAM here, between
@@ -95,7 +95,7 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"DXE Heap", 0xBAB00000, 0x0D1C0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK},
   // The DT calls this /reserved-memory/splash_region (label cont_splash_region); the row keeps the name
   // FuxiGopLogDxe looks for. Same range as the device tree, 0xB8000000 + 0x2B00000.
-  {"Display Reserved", 0xB8000000, 0x2B00000, HobOnlyNoCacheSetting, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},   // DT splash_region
+  {"Display Reserved", 0xB8000000, 0x2B00000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH_XN},   // DT splash_region
   {"DRAM 0x811d0000", 0x811D0000, 0x30000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x81480000", 0x81480000, 0x580000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
   {"DRAM 0x81cf4000", 0x81CF4000, 0xC000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv, WRITE_BACK_XN},   // DT /memory minus carveouts
