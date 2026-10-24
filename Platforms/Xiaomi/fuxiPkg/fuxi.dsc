@@ -80,6 +80,10 @@
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferColorDepth|32
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferFontScale|1
   gSiliciumPkgTokenSpaceGuid.PcdFrameBufferDelay|30000
+  # The "Log Buffer" row in MemoryMapLib reserves exactly this window; FuxiLogDumpDxe
+  # turns it into fuxi-log.txt on the payload volume.
+  gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferAddress|0xA7605000
+  gSiliciumPkgTokenSpaceGuid.PcdDebugLogBufferSize|0x00008000
 
   #
   # Platform PEI
@@ -112,6 +116,7 @@
   fuxiPkg/Drivers/FuxiBootMemoryDxe/FuxiBootMemoryDxe.inf
   fuxiPkg/Drivers/FuxiKeyInputDxe/FuxiKeyInputDxe.inf
   fuxiPkg/Drivers/FuxiDiagDxe/FuxiDiagDxe.inf
+fuxiPkg/Drivers/FuxiLogDumpDxe/FuxiLogDumpDxe.inf
   DarwinBootPkg/Driver/DarwinBoot.inf
 
 [LibraryClasses]
