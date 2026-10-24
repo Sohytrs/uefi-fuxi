@@ -93,6 +93,7 @@ READ_LOCK_STATUS   = TRUE
   INF SiliciumPkg/Drivers/SmBiosTableDxe/SmBiosTableDxe.inf
 
   # UniXNU
+  INF fuxiPkg/Drivers/FuxiDiagDxe/FuxiDiagDxe.inf
   INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
 
