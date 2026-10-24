@@ -129,21 +129,28 @@ STATIC EFI_MEMORY_REGION_DESCRIPTOR gMemoryDescriptor[] = {
   {"APSS_HM", 0x17000000, 0x2000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},   // SM8550 SoC
 
   //
-  // Peripheral register windows. The vendor HAL maps these before it touches a
-  // controller; without a descriptor the call fails with
-  //   Failed to map PhysicalAddr:0x...., size:0x....
-  // UFS is the one that matters for storage: UFSDxe asks for 0x1D80000/0x20000,
-  // which covers ufs_mem 0x1D84000, ufs_ice 0x1D88000 and ufs_ice_hwkm 0x1D90000
-  // from the fuxi device tree. Addresses come from the same tree.
+  // Peripheral register windows.
   //
-  {"UFS", 0x1D80000, 0x20000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"USB3", 0xA600000, 0x100000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"USB2_QSCRATCH", 0x1FC0000, 0x10000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"SPMI", 0xC400000, 0x100000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"QUP1", 0xAC0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"QUP2", 0x8C0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"QUP_I2C", 0x9C0000, 0x2000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN},
-  {"TLMM", 0xF100000, 0x300000, NoHob, MMAP_IO, INITIALIZED, Conv, UNCACHED_UNBUFFERED_XN}
+  // The vendor HAL maps these before touching a controller, and shengPkg (same
+  // SM8550, working vendor chain) declares them with AddDev so they land in the
+  // GCD. NoHob only skips the HOB, which is why UFSDxe still failed with
+  //   Failed to map PhysicalAddr:0x1D80000, size:0x20000
+  // The UFS window covers ufs_mem 0x1D84000, ufs_ice 0x1D88000 and ufs_ice_hwkm
+  // 0x1D90000 from the fuxi device tree.
+  //
+  {"UFS", 0x01D80000, 0x00040000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"USB", 0x0A600000, 0x00200000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"TLMM", 0x0F000000, 0x01000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"QUP", 0x00800000, 0x03000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"PERIPH_SS", 0x08800000, 0x00100000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"SMMU", 0x15000000, 0x00200000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"AOSS", 0x0B000000, 0x04000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"APSS_HM", 0x17000000, 0x02000000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"CORE_TOP_CSR", 0x01F00000, 0x00100000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"CRYPTO0_CRYPTO", 0x01DC0000, 0x00040000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"SECURITY_CONTROL", 0x00780000, 0x00007000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"IPC_ROUTER_TOP", 0x00400000, 0x00100000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE},
+  {"IMEM_COOKIE_BASE", 0x146AA000, 0x00016000, AddDev, MMAP_IO, UNCACHEABLE, MmIO, NS_DEVICE}
 };
 
 VOID
