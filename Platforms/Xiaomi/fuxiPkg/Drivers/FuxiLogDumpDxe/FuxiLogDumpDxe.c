@@ -36,6 +36,40 @@ STATIC BOOLEAN    mDone;
   Copy the ring into a linear buffer and write it to \fuxi-log.txt on the volume that
   carries \EFI\UniXNU\unixnu.toml.
 **/
+/**
+  Save the ramoops window that Android reserves, so a kernel that dies without USB still
+  leaves its console text readable. The kernel cannot map that physical address reliably;
+  firmware can read it directly before the next boot.
+**/
+STATIC
+EFI_STATUS
+DumpRamoops (
+  IN EFI_FILE_PROTOCOL  *Root
+  )
+{
+  EFI_STATUS         Status;
+  EFI_FILE_PROTOCOL  *File;
+  UINT8              *Base;
+  UINTN              Size;
+  UINTN              Written;
+
+  Base = (UINT8 *)(UINTN)FUXI_RAMOOPS_ADDRESS;
+  Size = FUXI_RAMOOPS_SIZE;
+
+  Status = Root->Open (Root, &File, L"fuxi-pstore.bin",
+                       EFI_FILE_MODE_CREATE | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_READ, 0);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  Written = Size;
+  Status = File->Write (File, &Written, Base);
+  if (!EFI_ERROR (Status)) {
+    File->Flush (File);
+  }
+  File->Close (File);
+  return Status;
+}
+
 STATIC
 EFI_STATUS
 DumpToVolume (
@@ -137,6 +171,8 @@ DumpToPayloadVolume (
       if (!EFI_ERROR (Status)) {
         Result = EFI_SUCCESS;
       }
+      /* Also keep the kernel console window for the run that just ended. */
+      DumpRamoops (Root);
     }
     Root->Close (Root);
   }
