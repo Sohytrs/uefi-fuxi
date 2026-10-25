@@ -19,3 +19,7 @@ typedef struct {
 } FUXI_LOG_HEADER;
 
 #endif
+
+/* Android reserves this window for ramoops; the kernel console is mirrored there. */
+#define FUXI_RAMOOPS_ADDRESS  0xA7000000ULL
+#define FUXI_RAMOOPS_SIZE     (2ULL * 1024 * 1024)
